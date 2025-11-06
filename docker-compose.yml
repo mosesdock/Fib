@@ -1,44 +1,106 @@
-version: '3'
+version: '3.8'
 services:
   postgres:
-    image: 'postgres:latest'
+    image: 'postgres:15-alpine'
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   redis:
-    image: 'redis:latest'
+    image: 'redis:7-alpine'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
   nginx:
-    restart: always
+    restart: unless-stopped
     build:
       dockerfile: Dockerfile.dev
       context: ./nginx
-    ports: 
-      - '3050:80'    
+    ports:
+      - '3050:80'
+    depends_on:
+      api:
+        condition: service_healthy
+      client:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   api:
+    restart: unless-stopped
     build:
         dockerfile: Dockerfile.dev
         context: ./server
     volumes:
           - /app/node_modules
-          - ./server:/app   
-    environment: 
-        - REDIS_HOST=redis  
-        - REDIS_PORT=6379
-        - PGUSER=postgres
+          - ./server:/app
+    environment:
+        - REDIS_HOST=${REDIS_HOST:-redis}
+        - REDIS_PORT=${REDIS_PORT:-6379}
+        - PGUSER=${POSTGRES_USER:-postgres}
         - PGHOST=postgres
-        - PGDATABASE=postgres
-        - PGPASSWORD=postgres_password
+        - PGDATABASE=${POSTGRES_DB:-postgres}
+        - PGPASSWORD=${POSTGRES_PASSWORD}
         - PGPORT=5432
+        - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+        - NODE_ENV=${NODE_ENV:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   client:
-    build: 
+    restart: unless-stopped
+    build:
       dockerfile: Dockerfile.dev
       context: ./client
-    volumes: 
+    volumes:
         - /app/node_modules
         - ./client:/app
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+
   worker:
-    build: 
+    restart: unless-stopped
+    build:
       dockerfile: Dockerfile.dev
-      context: ./worker 
-    volumes: 
+      context: ./worker
+    volumes:
       - /app/node_modules
       - ./worker:/app
-    
-        
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - NODE_ENV=${NODE_ENV:-development}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

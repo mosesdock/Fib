@@ -1,10 +1,17 @@
 {
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "Fibonacci calculator background worker",
+  "main": "index.js",
   "dependencies": {
-    "nodemon": "1.18.3",
-    "redis": "2.8.0"
+    "nodemon": "^3.0.2",
+    "redis": "^4.6.11"
   },
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

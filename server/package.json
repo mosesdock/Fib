@@ -1,14 +1,21 @@
 {
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Fibonacci calculator API server",
+  "main": "index.js",
   "dependencies": {
-    "express": "4.16.3",
-    "pg": "7.4.3",
-    "redis": "2.8.0",
-    "cors": "2.8.4",
-    "nodemon": "1.19.1",
-    "body-parser": "*"
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "redis": "^4.6.11",
+    "cors": "^2.8.5",
+    "nodemon": "^3.0.2",
+    "body-parser": "^1.20.2"
   },
   "scripts": {
     "dev": "nodemon",
     "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
